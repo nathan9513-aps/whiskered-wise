@@ -11,6 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { type Service, timeSlots } from "@/lib/services";
+import { addBooking } from "@/lib/bookings";
+import { sendWhatsAppNotification, getWhatsAppConfig } from "@/lib/whatsapp";
+import { createCalendarEvent, isGoogleConnected } from "@/lib/googleCalendar";
 
 interface BookingSectionProps {
   selectedService: Service | null;
@@ -24,15 +27,80 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedService || !date || !time || !name || !phone) {
       toast.error("Compila tutti i campi obbligatori");
       return;
     }
-    setSubmitted(true);
-    toast.success("Prenotazione confermata! Ti contatteremo a breve.");
+
+    setIsSubmitting(true);
+
+    try {
+      // Format date for storage
+      const formattedDate = format(date, "yyyy-MM-dd");
+
+      // Save booking to localStorage
+      const booking = addBooking({
+        service: selectedService,
+        date: formattedDate,
+        time,
+        name,
+        phone,
+        email: email || undefined,
+        notes: notes || undefined,
+      });
+
+      // Send WhatsApp notification if configured
+      const whatsappConfig = getWhatsAppConfig();
+      if (whatsappConfig.enabled && whatsappConfig.notificationNumber) {
+        await sendWhatsAppNotification({
+          service: selectedService,
+          date: formattedDate,
+          time,
+          name,
+          phone,
+        });
+        toast.success("Notifica WhatsApp inviata!");
+      }
+
+      // Sync to Google Calendar if connected
+      if (isGoogleConnected()) {
+        const calendarResult = await createCalendarEvent({
+          service: selectedService,
+          date: formattedDate,
+          time,
+          name,
+          phone,
+          email: email || undefined,
+          notes: notes || undefined,
+        });
+
+        if (calendarResult) {
+          toast.success("Evento aggiunto a Google Calendar!");
+        }
+      }
+
+      setSubmitted(true);
+      toast.success("Prenotazione confermata! Ti contatteremo a breve.");
+    } catch (error) {
+      console.error("Booking error:", error);
+      toast.error("Si è verificato un errore. Riprova.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setSubmitted(false);
+    setDate(undefined);
+    setTime(undefined);
+    setName("");
+    setPhone("");
+    setEmail("");
+    setNotes("");
   };
 
   if (submitted) {
@@ -58,15 +126,7 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
             </p>
             <Button
               variant="outline"
-              onClick={() => {
-                setSubmitted(false);
-                setDate(undefined);
-                setTime(undefined);
-                setName("");
-                setPhone("");
-                setEmail("");
-                setNotes("");
-              }}
+              onClick={resetForm}
               className="border-primary/30 text-primary hover:bg-primary/10"
             >
               Nuova Prenotazione
@@ -226,10 +286,10 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
           <Button
             type="submit"
             size="lg"
-            disabled={!selectedService || !date || !time || !name || !phone}
+            disabled={!selectedService || !date || !time || !name || !phone || isSubmitting}
             className="w-full bg-primary text-primary-foreground hover:bg-gold-light text-lg py-6 font-body font-semibold tracking-wide shadow-gold transition-all duration-300 disabled:opacity-40"
           >
-            Conferma Prenotazione
+            {isSubmitting ? "Conferma in corso..." : "Conferma Prenotazione"}
           </Button>
         </form>
       </div>
