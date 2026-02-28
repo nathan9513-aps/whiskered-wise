@@ -35,6 +35,7 @@ import {
   connectWhatsApp,
   disconnectWhatsApp,
   confirmWhatsAppConnection,
+  fetchWhatsAppStatus,
   WhatsAppConfig,
   WhatsAppStatus,
 } from "@/lib/whatsapp";
@@ -89,6 +90,29 @@ const Admin = () => {
     }
   }, []);
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (whatsappConfig.enabled) {
+      // Fetch initial status from backend
+      fetchWhatsAppStatus().then(status => setWhatsappStatus(status));
+
+      // Poll for status updates (QR code refresh, connection status change)
+      interval = setInterval(async () => {
+        const status = await fetchWhatsAppStatus();
+        setWhatsappStatus(status);
+        if (status.connected && isConnectingWhatsApp) {
+          setIsConnectingWhatsApp(false);
+          toast.success("WhatsApp connesso!");
+        }
+      }, 5000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [whatsappConfig.enabled, isConnectingWhatsApp]);
+
   const loadBookings = () => {
     setBookings(getBookings());
   };
@@ -134,21 +158,25 @@ const Admin = () => {
     const result = await connectWhatsApp();
     if (result.success && result.qrCode) {
       setWhatsappStatus({ connected: false, qrCode: result.qrCode });
-      toast.success("QR Code generato! Scansiona con WhatsApp.");
+      toast.success("QR Code generato! Attendi lo stato...");
+    } else if (result.success) {
+      // Potrebbe essere già in corso l'inizializzazione
+      toast.success("Inizializzazione WhatsApp in corso...");
     } else {
       toast.error("Errore nella connessione WhatsApp");
+      setIsConnectingWhatsApp(false);
     }
-    setIsConnectingWhatsApp(false);
   };
 
   const handleConfirmWhatsAppConnection = () => {
     confirmWhatsAppConnection();
     setWhatsappStatus({ connected: true, qrCode: null });
-    toast.success("WhatsApp connesso!");
+    setIsConnectingWhatsApp(false);
+    toast.success("WhatsApp connesso (manuale)!");
   };
 
-  const handleDisconnectWhatsApp = () => {
-    disconnectWhatsApp();
+  const handleDisconnectWhatsApp = async () => {
+    await disconnectWhatsApp();
     setWhatsappStatus({ connected: false, qrCode: null });
     toast.success("WhatsApp disconnesso");
   };
