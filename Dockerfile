@@ -50,11 +50,14 @@ WORKDIR /app
 # Copia package.json
 COPY package*.json ./
 
-# Installa le dipendenze Node.js (solo quelle necessarie in produzione)
-RUN npm ci --omit=dev
+# Installa tutte le dipendenze per poter buildare il frontend
+RUN npm ci
 
-# Copia solo i file del server
-COPY server.js ./
+# Copia tutto il codice (frontend e backend)
+COPY . .
+
+# Esegui la build del frontend (creerà la cartella dist)
+RUN npm run build
 
 # Variabili d'ambiente per far trovare Chromium a Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true

@@ -30,7 +30,9 @@ export const setWhatsAppStatus = (status: WhatsAppStatus): void => {
 };
 
 // Use environment variable for the backend API URL, fallback to localhost for local development
-const API_URL = import.meta.env.VITE_WHATSAPP_API_URL || "http://localhost:3001/api/whatsapp";
+const API_URL = import.meta.env.PROD
+  ? "/api/whatsapp"
+  : (import.meta.env.VITE_WHATSAPP_API_URL || "http://localhost:3001/api/whatsapp");
 
 export const fetchWhatsAppStatus = async (): Promise<WhatsAppStatus> => {
   try {
