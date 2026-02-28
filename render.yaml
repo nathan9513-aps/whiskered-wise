@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: whatsapp-backend-whiskered
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free # Change to starter/standard if you add a disk
+    healthCheckPath: /api/whatsapp/status
+    envVars:
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: /usr/bin/chromium
+      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+        value: "true"
+      # CORS setup if your frontend is on Netlify
+      - key: FRONTEND_URL
+        value: "https://tuo-sito-su.netlify.app" # REPLACE WITH YOUR NETLIFY URL
+    # To keep WhatsApp session persistent (requires paid plan on Render):
+    # disk:
+    #   name: whatsapp-session-data
+    #   mountPath: /app/.wwebjs_auth
+    #   sizeGB: 1
