@@ -1,8 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import pkg from 'whatsapp-web.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
@@ -130,6 +135,14 @@ app.post('/api/whatsapp/send', async (req, res) => {
     console.error('Failed to send message:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to send message' });
   }
+});
+
+// Serve static files from the React frontend app
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Anything that doesn't match the above, send back index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
