@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 .env
 .wwebjs_auth/
+.wwebjs_cache/
+
+.wwebjs_auth/
+.wwebjs_cache/

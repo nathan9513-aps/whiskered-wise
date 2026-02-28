@@ -101,11 +101,17 @@ const Admin = () => {
       interval = setInterval(async () => {
         const status = await fetchWhatsAppStatus();
         setWhatsappStatus(status);
+
+        // Se troviamo il qrCode, togliamo il loading "Connessione..."
+        if (status.qrCode && isConnectingWhatsApp) {
+          setIsConnectingWhatsApp(false);
+        }
+
         if (status.connected && isConnectingWhatsApp) {
           setIsConnectingWhatsApp(false);
           toast.success("WhatsApp connesso!");
         }
-      }, 5000);
+      }, 3000);
     }
 
     return () => {
