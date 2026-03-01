@@ -27,7 +27,8 @@ import { Separator } from "@/components/ui/separator";
 import AdminLogin from "@/components/AdminLogin";
 import { isAdminAuthenticated, logoutAdmin } from "@/lib/admin";
 import { getBookings, deleteBooking, Booking, getUpcomingBookings, getTodayBookings } from "@/lib/bookings";
-import { services as defaultServices, Service } from "@/lib/services";
+import { getServices, addService, deleteService, defaultServices, Service } from "@/lib/services";
+import { getOperators, addOperator, deleteOperator, Operator } from "@/lib/operators";
 import {
   getWhatsAppConfig,
   saveWhatsAppConfig,
@@ -60,12 +61,21 @@ const Admin = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   
   // Services state
-  const [services, setServices] = useState<Service[]>(() => {
-    const stored = localStorage.getItem(SERVICES_KEY);
-    return stored ? JSON.parse(stored) : defaultServices;
-  });
+  const [services, setServices] = useState<Service[]>(getServices());
   const [editingService, setEditingService] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState<number>(0);
+
+  // New Service state
+  const [newServiceName, setNewServiceName] = useState("");
+  const [newServiceDescription, setNewServiceDescription] = useState("");
+  const [newServiceDuration, setNewServiceDuration] = useState<number>(30);
+  const [newServicePrice, setNewServicePrice] = useState<number>(20);
+  const [newServiceIcon, setNewServiceIcon] = useState("✂️");
+
+  // Operators state
+  const [operators, setOperators] = useState<Operator[]>(getOperators());
+  const [newOperatorName, setNewOperatorName] = useState("");
+  const [newOperatorAvatar, setNewOperatorAvatar] = useState("👨🏻");
 
   // WhatsApp state
   const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig>(getWhatsAppConfig());
@@ -143,6 +153,56 @@ const Admin = () => {
     localStorage.setItem(SERVICES_KEY, JSON.stringify(updatedServices));
     setEditingService(null);
     toast.success("Prezzo aggiornato!");
+  };
+
+  const handleAddService = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newServiceName || !newServiceDescription) {
+      toast.error("Compila tutti i campi obbligatori per il servizio.");
+      return;
+    }
+    const newService = addService({
+      name: newServiceName,
+      description: newServiceDescription,
+      duration: newServiceDuration,
+      price: newServicePrice,
+      icon: newServiceIcon,
+    });
+    setServices([...services, newService]);
+    setNewServiceName("");
+    setNewServiceDescription("");
+    setNewServiceDuration(30);
+    setNewServicePrice(20);
+    setNewServiceIcon("✂️");
+    toast.success("Servizio aggiunto!");
+  };
+
+  const handleDeleteService = (id: string) => {
+    deleteService(id);
+    setServices(services.filter(s => s.id !== id));
+    toast.success("Servizio eliminato!");
+  };
+
+  const handleAddOperator = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOperatorName) {
+      toast.error("Inserisci il nome dell'operatore.");
+      return;
+    }
+    const newOperator = addOperator({
+      name: newOperatorName,
+      avatar: newOperatorAvatar,
+    });
+    setOperators([...operators, newOperator]);
+    setNewOperatorName("");
+    setNewOperatorAvatar("👨🏻");
+    toast.success("Operatore aggiunto!");
+  };
+
+  const handleDeleteOperator = (id: string) => {
+    deleteOperator(id);
+    setOperators(operators.filter(op => op.id !== id));
+    toast.success("Operatore eliminato!");
   };
 
   // WhatsApp management
@@ -244,7 +304,7 @@ const Admin = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-4 max-w-2xl mx-auto bg-card border border-border">
+          <TabsList className="grid grid-cols-5 max-w-4xl mx-auto bg-card border border-border">
             <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <LayoutDashboard className="w-4 h-4 mr-2" />
               Dashboard
@@ -256,6 +316,10 @@ const Admin = () => {
             <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <DollarSign className="w-4 h-4 mr-2" />
               Servizi
+            </TabsTrigger>
+            <TabsTrigger value="operators" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Users className="w-4 h-4 mr-2" />
+              Operatori
             </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Settings className="w-4 h-4 mr-2" />
@@ -353,6 +417,11 @@ const Admin = () => {
                           <span className="text-3xl">{booking.service.icon}</span>
                           <div>
                             <p className="font-semibold text-foreground">{booking.service.name}</p>
+                            {booking.operatorName && (
+                              <p className="text-xs font-medium text-primary mb-1">
+                                Operatore: {booking.operatorName}
+                              </p>
+                            )}
                             <p className="text-sm text-muted-foreground">
                               {booking.name} — {booking.phone}
                             </p>
@@ -393,10 +462,71 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="font-display flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-primary" />
-                  Gestione Prezzi Servizi
+                  Gestione Servizi
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-8">
+                <form onSubmit={handleAddService} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-secondary/20 rounded-lg border border-border">
+                  <div className="md:col-span-2 mb-2">
+                    <h3 className="text-sm font-semibold text-foreground">Aggiungi Nuovo Servizio</h3>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Nome</label>
+                    <Input
+                      value={newServiceName}
+                      onChange={(e) => setNewServiceName(e.target.value)}
+                      placeholder="Es. Taglio Sfumato"
+                      className="bg-card"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Icona</label>
+                    <select
+                      value={newServiceIcon}
+                      onChange={(e) => setNewServiceIcon(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {["✂️", "🪒", "💈", "🧴", "🎨", "👦", "💇‍♂️", "💆‍♂️", "🌟"].map(icon => (
+                        <option key={icon} value={icon}>{icon}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-muted-foreground mb-1 block">Descrizione</label>
+                    <Input
+                      value={newServiceDescription}
+                      onChange={(e) => setNewServiceDescription(e.target.value)}
+                      placeholder="Breve descrizione..."
+                      className="bg-card"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Durata (min)</label>
+                    <Input
+                      type="number"
+                      value={newServiceDuration}
+                      onChange={(e) => setNewServiceDuration(Number(e.target.value))}
+                      className="bg-card"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Prezzo (€)</label>
+                    <Input
+                      type="number"
+                      value={newServicePrice}
+                      onChange={(e) => setNewServicePrice(Number(e.target.value))}
+                      className="bg-card"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2 mt-2">
+                    <Button type="submit" className="w-full">Aggiungi Servizio</Button>
+                  </div>
+                </form>
+
                 <div className="space-y-4">
                   {services.map((service) => (
                     <div key={service.id} className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg">
@@ -443,11 +573,80 @@ const Admin = () => {
                             >
                               <Edit3 className="w-4 h-4" />
                             </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteService(service.id)}
+                              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </>
                         )}
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Operators Tab */}
+          <TabsContent value="operators" className="space-y-6">
+            <Card className="bg-gradient-card border-border">
+              <CardHeader>
+                <CardTitle className="font-display flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" />
+                  Gestione Operatori
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <form onSubmit={handleAddOperator} className="flex flex-col md:flex-row gap-4 p-4 bg-secondary/20 rounded-lg border border-border items-end">
+                  <div className="flex-1 w-full">
+                    <label className="text-xs text-muted-foreground mb-1 block">Nome Operatore</label>
+                    <Input
+                      value={newOperatorName}
+                      onChange={(e) => setNewOperatorName(e.target.value)}
+                      placeholder="Nome"
+                      className="bg-card"
+                      required
+                    />
+                  </div>
+                  <div className="w-full md:w-32">
+                    <label className="text-xs text-muted-foreground mb-1 block">Avatar</label>
+                    <select
+                      value={newOperatorAvatar}
+                      onChange={(e) => setNewOperatorAvatar(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {["👨🏻", "🧔🏽‍♂️", "👨🏽‍🦱", "👩🏻", "🧔🏻‍♂️", "🧑🏼"].map(avatar => (
+                        <option key={avatar} value={avatar}>{avatar}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button type="submit" className="w-full md:w-auto">Aggiungi</Button>
+                </form>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {operators.map((operator) => (
+                    <div key={operator.id} className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <span className="text-3xl">{operator.avatar}</span>
+                        <p className="font-semibold text-foreground text-lg">{operator.name}</p>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDeleteOperator(operator.id)}
+                        className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  ))}
+                  {operators.length === 0 && (
+                    <p className="text-muted-foreground text-center py-4 col-span-2">Nessun operatore configurato.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>

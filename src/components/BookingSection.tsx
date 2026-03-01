@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { type Service, timeSlots } from "@/lib/services";
+import { getOperators, type Operator } from "@/lib/operators";
 import { addBooking } from "@/lib/bookings";
 import { sendWhatsAppNotification, getWhatsAppConfig } from "@/lib/whatsapp";
 import { createCalendarEvent, isGoogleConnected } from "@/lib/googleCalendar";
@@ -26,6 +27,9 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
+  const operators = getOperators();
+
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -45,6 +49,8 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
       // Save booking to localStorage
       const booking = addBooking({
         service: selectedService,
+        operatorId: selectedOperator?.id,
+        operatorName: selectedOperator ? selectedOperator.name : "Qualsiasi",
         date: formattedDate,
         time,
         name,
@@ -101,6 +107,7 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
     setPhone("");
     setEmail("");
     setNotes("");
+    setSelectedOperator(null);
   };
 
   if (submitted) {
@@ -120,6 +127,9 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
             </h3>
             <p className="text-muted-foreground mb-2">
               {selectedService?.name} — {date && format(date, "d MMMM yyyy", { locale: it })} alle {time}
+            </p>
+            <p className="text-muted-foreground mb-4 font-medium text-primary">
+              Operatore: {selectedOperator ? selectedOperator.name : "Qualsiasi"}
             </p>
             <p className="text-muted-foreground text-sm mb-6">
               Riceverai una conferma a breve. Grazie, {name}!
@@ -172,6 +182,44 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
               <span className="font-display text-lg text-foreground">{selectedService.name}</span>
               <span className="text-primary ml-2">— {selectedService.price}€</span>
             </motion.div>
+          )}
+
+          {/* Operator Selection */}
+          {operators.length > 0 && (
+            <div>
+              <label className="text-sm text-muted-foreground mb-3 block font-body text-center">Scegli il tuo barbiere (opzionale)</label>
+              <div className="flex flex-wrap gap-4 justify-center">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOperator(null)}
+                  className={cn(
+                    "flex flex-col items-center p-3 rounded-lg border transition-all duration-300 w-24",
+                    selectedOperator === null
+                      ? "bg-primary/10 border-primary shadow-gold"
+                      : "bg-card border-border hover:border-primary/40"
+                  )}
+                >
+                  <span className="text-2xl mb-1">🤝</span>
+                  <span className="text-xs font-semibold">Qualsiasi</span>
+                </button>
+                {operators.map((op) => (
+                  <button
+                    key={op.id}
+                    type="button"
+                    onClick={() => setSelectedOperator(op)}
+                    className={cn(
+                      "flex flex-col items-center p-3 rounded-lg border transition-all duration-300 w-24",
+                      selectedOperator?.id === op.id
+                        ? "bg-primary/10 border-primary shadow-gold"
+                        : "bg-card border-border hover:border-primary/40"
+                    )}
+                  >
+                    <span className="text-2xl mb-1">{op.avatar}</span>
+                    <span className="text-xs font-semibold">{op.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Date & Time */}
