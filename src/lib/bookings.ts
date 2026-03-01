@@ -3,6 +3,8 @@ import { Service } from "./services";
 export interface Booking {
   id: string;
   service: Service;
+  operatorId?: string;
+  operatorName?: string;
   date: string;
   time: string;
   name: string;

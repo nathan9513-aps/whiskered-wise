@@ -7,7 +7,7 @@ export interface Service {
   icon: string;
 }
 
-export const services: Service[] = [
+export const defaultServices: Service[] = [
   {
     id: "taglio",
     name: "Taglio Capelli",
@@ -57,6 +57,40 @@ export const services: Service[] = [
     icon: "👦",
   },
 ];
+
+const SERVICES_KEY = "whiskered_services";
+
+export const getServices = (): Service[] => {
+  const stored = localStorage.getItem(SERVICES_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      console.error("Failed to parse services from localStorage", e);
+    }
+  }
+  return defaultServices;
+};
+
+export const addService = (service: Omit<Service, "id">): Service => {
+  const services = getServices();
+  const newService: Service = {
+    ...service,
+    id: `service-${Date.now()}`,
+  };
+  services.push(newService);
+  localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
+  return newService;
+};
+
+export const deleteService = (id: string): void => {
+  const services = getServices().filter((s) => s.id !== id);
+  localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
+};
+
+// Export services as alias for getServices to maintain backward compatibility where needed,
+// though dynamic fetching is preferred.
+export const services = getServices();
 
 export const timeSlots = [
   "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
