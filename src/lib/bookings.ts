@@ -1,4 +1,5 @@
 import { Service } from "./services";
+import { API_BASE_URL } from "./api";
 
 export interface Booking {
   id: string;
@@ -16,36 +17,41 @@ export interface Booking {
 
 const BOOKINGS_KEY = "whiskered_bookings";
 
-export const getBookings = (): Booking[] => {
-  const stored = localStorage.getItem(BOOKINGS_KEY);
-  return stored ? JSON.parse(stored) : [];
+export const getBookings = async (): Promise<Booking[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/bookings`);
+    if (!response.ok) throw new Error("Network error");
+    return await response.json();
+  } catch (error) {
+    console.error("Failed to fetch bookings:", error);
+    return [];
+  }
 };
 
-export const addBooking = (booking: Omit<Booking, "id" | "createdAt">): Booking => {
-  const bookings = getBookings();
-  const newBooking: Booking = {
-    ...booking,
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString(),
-  };
-  bookings.push(newBooking);
-  localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
-  return newBooking;
+export const addBooking = async (booking: Omit<Booking, "id" | "createdAt">): Promise<Booking> => {
+  const response = await fetch(`${API_BASE_URL}/bookings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(booking)
+  });
+  if (!response.ok) throw new Error("Failed to add booking");
+  return await response.json();
 };
 
-export const deleteBooking = (id: string): void => {
-  const bookings = getBookings().filter(b => b.id !== id);
-  localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
+export const deleteBooking = async (id: string): Promise<void> => {
+  await fetch(`${API_BASE_URL}/bookings/${id}`, { method: "DELETE" });
 };
 
-export const getTodayBookings = (): Booking[] => {
+export const getTodayBookings = async (): Promise<Booking[]> => {
   const today = new Date().toISOString().split('T')[0];
-  return getBookings().filter(b => b.date === today);
+  const bookings = await getBookings();
+  return bookings.filter(b => b.date === today);
 };
 
-export const getUpcomingBookings = (): Booking[] => {
+export const getUpcomingBookings = async (): Promise<Booking[]> => {
   const today = new Date().toISOString().split('T')[0];
-  return getBookings()
+  const bookings = await getBookings();
+  return bookings
     .filter(b => b.date >= today)
     .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime());
 };

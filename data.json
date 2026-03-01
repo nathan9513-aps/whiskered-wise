@@ -1,0 +1,65 @@
+{
+  "services": [
+    {
+      "id": "taglio",
+      "name": "Taglio Capelli",
+      "description": "Taglio classico o moderno con lavaggio e styling",
+      "duration": 30,
+      "price": 18,
+      "icon": "✂️"
+    },
+    {
+      "id": "barba",
+      "name": "Barba",
+      "description": "Rasatura e modellamento barba con asciugamano caldo",
+      "duration": 20,
+      "price": 12,
+      "icon": "🪒"
+    },
+    {
+      "id": "taglio-barba",
+      "name": "Taglio + Barba",
+      "description": "Pacchetto completo taglio capelli e cura della barba",
+      "duration": 45,
+      "price": 25,
+      "icon": "💈"
+    },
+    {
+      "id": "trattamento",
+      "name": "Trattamento Capelli",
+      "description": "Trattamento rigenerante con prodotti professionali",
+      "duration": 40,
+      "price": 20,
+      "icon": "🧴"
+    },
+    {
+      "id": "colorazione",
+      "name": "Colorazione",
+      "description": "Colorazione professionale o copertura capelli bianchi",
+      "duration": 60,
+      "price": 30,
+      "icon": "🎨"
+    },
+    {
+      "id": "bambino",
+      "name": "Taglio Bambino",
+      "description": "Taglio dedicato per bambini fino a 12 anni",
+      "duration": 20,
+      "price": 12,
+      "icon": "👦"
+    }
+  ],
+  "operators": [
+    {
+      "id": "op-1",
+      "name": "Marco",
+      "avatar": "👨🏻"
+    },
+    {
+      "id": "op-2",
+      "name": "Luigi",
+      "avatar": "🧔🏽‍♂️"
+    }
+  ],
+  "bookings": []
+}

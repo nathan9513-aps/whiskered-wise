@@ -59,9 +59,11 @@ const Admin = () => {
   
   // Bookings state
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [todayBookings, setTodayBookings] = useState<Booking[]>([]);
+  const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
   
   // Services state
-  const [services, setServices] = useState<Service[]>(getServices());
+  const [services, setServices] = useState<Service[]>([]);
   const [editingService, setEditingService] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState<number>(0);
 
@@ -73,7 +75,7 @@ const Admin = () => {
   const [newServiceIcon, setNewServiceIcon] = useState("✂️");
 
   // Operators state
-  const [operators, setOperators] = useState<Operator[]>(getOperators());
+  const [operators, setOperators] = useState<Operator[]>([]);
   const [newOperatorName, setNewOperatorName] = useState("");
   const [newOperatorAvatar, setNewOperatorAvatar] = useState("👨🏻");
 
@@ -89,6 +91,8 @@ const Admin = () => {
   useEffect(() => {
     setIsAuthenticated(isAdminAuthenticated());
     loadBookings();
+    loadServices();
+    loadOperators();
     
     // Check for Google OAuth callback
     if (window.location.hash.includes("access_token") && window.location.hash.includes("state=google_auth")) {
@@ -129,8 +133,23 @@ const Admin = () => {
     };
   }, [whatsappConfig.enabled, isConnectingWhatsApp]);
 
-  const loadBookings = () => {
-    setBookings(getBookings());
+  const loadBookings = async () => {
+    const data = await getBookings();
+    setBookings(data);
+    const today = await getTodayBookings();
+    setTodayBookings(today);
+    const upcoming = await getUpcomingBookings();
+    setUpcomingBookings(upcoming);
+  };
+
+  const loadServices = async () => {
+    const data = await getServices();
+    setServices(data);
+  };
+
+  const loadOperators = async () => {
+    const data = await getOperators();
+    setOperators(data);
   };
 
   const handleLogout = () => {
@@ -145,23 +164,31 @@ const Admin = () => {
     setEditPrice(service.price);
   };
 
-  const handleSaveService = (serviceId: string) => {
+  const handleSaveService = async (serviceId: string) => {
     const updatedServices = services.map(s =>
       s.id === serviceId ? { ...s, price: editPrice } : s
     );
+    // Note: To be fully correct, we should create `updateService` in api.
+    // For now, since we only update state locally:
+    const data = await getServices();
+    const serviceToUpdate = data.find((s: any) => s.id === serviceId);
+    if(serviceToUpdate) {
+        // We added updateService earlier.
+        const { updateService } = await import('@/lib/services');
+        await updateService(serviceId, { price: editPrice });
+    }
     setServices(updatedServices);
-    localStorage.setItem(SERVICES_KEY, JSON.stringify(updatedServices));
     setEditingService(null);
     toast.success("Prezzo aggiornato!");
   };
 
-  const handleAddService = (e: React.FormEvent) => {
+  const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newServiceName || !newServiceDescription) {
       toast.error("Compila tutti i campi obbligatori per il servizio.");
       return;
     }
-    const newService = addService({
+    const newService = await addService({
       name: newServiceName,
       description: newServiceDescription,
       duration: newServiceDuration,
@@ -177,19 +204,19 @@ const Admin = () => {
     toast.success("Servizio aggiunto!");
   };
 
-  const handleDeleteService = (id: string) => {
-    deleteService(id);
+  const handleDeleteService = async (id: string) => {
+    await deleteService(id);
     setServices(services.filter(s => s.id !== id));
     toast.success("Servizio eliminato!");
   };
 
-  const handleAddOperator = (e: React.FormEvent) => {
+  const handleAddOperator = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOperatorName) {
       toast.error("Inserisci il nome dell'operatore.");
       return;
     }
-    const newOperator = addOperator({
+    const newOperator = await addOperator({
       name: newOperatorName,
       avatar: newOperatorAvatar,
     });
@@ -199,8 +226,8 @@ const Admin = () => {
     toast.success("Operatore aggiunto!");
   };
 
-  const handleDeleteOperator = (id: string) => {
-    deleteOperator(id);
+  const handleDeleteOperator = async (id: string) => {
+    await deleteOperator(id);
     setOperators(operators.filter(op => op.id !== id));
     toast.success("Operatore eliminato!");
   };
@@ -270,8 +297,8 @@ const Admin = () => {
     toast.success("Configurazione Google salvata");
   };
 
-  const handleDeleteBooking = (id: string) => {
-    deleteBooking(id);
+  const handleDeleteBooking = async (id: string) => {
+    await deleteBooking(id);
     loadBookings();
     toast.success("Prenotazione eliminata");
   };
@@ -280,13 +307,11 @@ const Admin = () => {
     return <AdminLogin onLogin={() => setIsAuthenticated(true)} />;
   }
 
-  const todayBookings = getTodayBookings();
-  const upcomingBookings = getUpcomingBookings();
-  const totalRevenue = bookings.reduce((sum, b) => sum + b.service.price, 0);
+  const totalRevenue = (bookings || []).reduce((sum, b) => sum + (b?.service?.price || 0), 0);
 
   // Calcola ricavo totale per operatore (mese corrente)
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-  const currentMonthBookings = bookings.filter(b => b.date.startsWith(currentMonth));
+  const currentMonthBookings = (bookings || []).filter(b => b?.date?.startsWith(currentMonth));
 
   const revenueByOperator = currentMonthBookings.reduce((acc, booking) => {
     const operatorKey = booking.operatorName || "Nessun Operatore";

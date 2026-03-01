@@ -58,39 +58,44 @@ export const defaultServices: Service[] = [
   },
 ];
 
-const SERVICES_KEY = "whiskered_services";
+import { API_BASE_URL } from "./api";
 
-export const getServices = (): Service[] => {
-  const stored = localStorage.getItem(SERVICES_KEY);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch (e) {
-      console.error("Failed to parse services from localStorage", e);
-    }
+const SERVICES_KEY = "whiskered_services"; // For migration purpose only
+
+export const getServices = async (): Promise<Service[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/services`);
+    if (!response.ok) throw new Error("Network error");
+    return await response.json();
+  } catch (error) {
+    console.error("Failed to fetch services:", error);
+    return defaultServices; // Fallback
   }
-  return defaultServices;
 };
 
-export const addService = (service: Omit<Service, "id">): Service => {
-  const services = getServices();
-  const newService: Service = {
-    ...service,
-    id: `service-${Date.now()}`,
-  };
-  services.push(newService);
-  localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
-  return newService;
+export const addService = async (service: Omit<Service, "id">): Promise<Service> => {
+  const response = await fetch(`${API_BASE_URL}/services`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(service)
+  });
+  if (!response.ok) throw new Error("Failed to add service");
+  return await response.json();
 };
 
-export const deleteService = (id: string): void => {
-  const services = getServices().filter((s) => s.id !== id);
-  localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
+export const deleteService = async (id: string): Promise<void> => {
+  await fetch(`${API_BASE_URL}/services/${id}`, { method: "DELETE" });
 };
 
-// Export services as alias for getServices to maintain backward compatibility where needed,
-// though dynamic fetching is preferred.
-export const services = getServices();
+export const updateService = async (id: string, service: Partial<Service>): Promise<Service> => {
+  const response = await fetch(`${API_BASE_URL}/services/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(service)
+  });
+  if (!response.ok) throw new Error("Failed to update service");
+  return await response.json();
+};
 
 export const timeSlots = [
   "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
