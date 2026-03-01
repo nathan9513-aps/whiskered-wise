@@ -1,64 +1,130 @@
 {
   "services": [
     {
-      "id": "taglio",
-      "name": "Taglio Capelli",
-      "description": "Taglio classico o moderno con lavaggio e styling",
+      "id": "taglio-uomo",
+      "name": "Taglio Uomo",
+      "description": "Taglio capelli uomo",
       "duration": 30,
-      "price": 18,
+      "price": 19,
       "icon": "✂️"
+    },
+    {
+      "id": "shampoo",
+      "name": "Shampoo",
+      "description": "Lavaggio capelli",
+      "duration": 30,
+      "price": 2,
+      "icon": "🧴"
     },
     {
       "id": "barba",
       "name": "Barba",
-      "description": "Rasatura e modellamento barba con asciugamano caldo",
-      "duration": 20,
-      "price": 12,
+      "description": "Taglio Barba",
+      "duration": 30,
+      "price": 5,
       "icon": "🪒"
     },
     {
-      "id": "taglio-barba",
-      "name": "Taglio + Barba",
-      "description": "Pacchetto completo taglio capelli e cura della barba",
-      "duration": 45,
-      "price": 25,
-      "icon": "💈"
+      "id": "barba-modellata",
+      "name": "Barba Modellata",
+      "description": "Taglio barba modellata",
+      "duration": 30,
+      "price": 8,
+      "icon": "💇‍♂️"
     },
     {
-      "id": "trattamento",
-      "name": "Trattamento Capelli",
-      "description": "Trattamento rigenerante con prodotti professionali",
-      "duration": 40,
-      "price": 20,
+      "id": "sopracciglia",
+      "name": "Sopracciglia",
+      "description": "Taglio sopracciglia",
+      "duration": 30,
+      "price": 3,
+      "icon": "✂️"
+    },
+    {
+      "id": "pulizia-viso",
+      "name": "Pulizia Viso",
+      "description": "Pulizia del viso",
+      "duration": 30,
+      "price": 17,
       "icon": "🧴"
     },
     {
-      "id": "colorazione",
-      "name": "Colorazione",
-      "description": "Colorazione professionale o copertura capelli bianchi",
-      "duration": 60,
-      "price": 30,
+      "id": "disegni",
+      "name": "Disegni",
+      "description": "Disegni",
+      "duration": 30,
+      "price": 5,
       "icon": "🎨"
     },
     {
-      "id": "bambino",
-      "name": "Taglio Bambino",
-      "description": "Taglio dedicato per bambini fino a 12 anni",
-      "duration": 20,
-      "price": 12,
-      "icon": "👦"
+      "id": "depilazione-naso-orecchie",
+      "name": "Depilazione naso e orecchie",
+      "description": "Depilazione del naso e delle orecchie",
+      "duration": 30,
+      "price": 3,
+      "icon": "🪒"
+    },
+    {
+      "id": "meches",
+      "name": "Meches",
+      "description": "Meches capelli",
+      "duration": 30,
+      "price": 25,
+      "icon": "🎨"
+    },
+    {
+      "id": "colore",
+      "name": "Colore",
+      "description": "Colore",
+      "duration": 30,
+      "price": 0,
+      "icon": "🎨"
+    },
+    {
+      "id": "vip-all-inclusive",
+      "name": "Servizio speciale vip All inclusive",
+      "description": "Servizio All inclusive",
+      "duration": 30,
+      "price": 4,
+      "icon": "🌟"
+    },
+    {
+      "id": "taglio-10-bambini",
+      "name": "Taglio 10 bambini under",
+      "description": "Taglio bambini",
+      "duration": 30,
+      "price": 10,
+      "icon": "✂️"
+    },
+    {
+      "id": "solo-shampoo",
+      "name": "Solo shampoo",
+      "description": "Solo lavaggio capelli",
+      "duration": 30,
+      "price": 5,
+      "icon": "🧴"
     }
   ],
   "operators": [
     {
-      "id": "op-1",
-      "name": "Marco",
+      "id": "op-yousef",
+      "name": "Yousef",
+      "avatar": "🧔🏽‍♂️"
+    },
+    {
+      "id": "op-amza",
+      "name": "Amza",
+      "avatar": "👨🏽‍🦱"
+    },
+    {
+      "id": "op-ando",
+      "name": "Ando",
       "avatar": "👨🏻"
     },
     {
-      "id": "op-2",
-      "name": "Luigi",
-      "avatar": "🧔🏽‍♂️"
+      "id": "op-simo",
+      "name": "Simo",
+      "avatar": "🧔🏻‍♂️"
     }
   ],
   "bookings": []

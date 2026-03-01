@@ -27,7 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import AdminLogin from "@/components/AdminLogin";
 import { isAdminAuthenticated, logoutAdmin } from "@/lib/admin";
 import { getBookings, deleteBooking, Booking, getUpcomingBookings, getTodayBookings } from "@/lib/bookings";
-import { getServices, addService, deleteService, defaultServices, Service } from "@/lib/services";
+import { getServices, addService, deleteService, updateService, defaultServices, Service } from "@/lib/services";
 import { getOperators, addOperator, deleteOperator, Operator } from "@/lib/operators";
 import {
   getWhatsAppConfig,
@@ -168,13 +168,9 @@ const Admin = () => {
     const updatedServices = services.map(s =>
       s.id === serviceId ? { ...s, price: editPrice } : s
     );
-    // Note: To be fully correct, we should create `updateService` in api.
-    // For now, since we only update state locally:
     const data = await getServices();
     const serviceToUpdate = data.find((s: any) => s.id === serviceId);
     if(serviceToUpdate) {
-        // We added updateService earlier.
-        const { updateService } = await import('@/lib/services');
         await updateService(serviceId, { price: editPrice });
     }
     setServices(updatedServices);

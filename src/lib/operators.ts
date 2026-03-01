@@ -9,16 +9,10 @@ import { API_BASE_URL } from "./api";
 const OPERATORS_KEY = "whiskered_operators"; // For migration
 
 export const defaultOperators: Operator[] = [
-  {
-    id: "op-1",
-    name: "Marco",
-    avatar: "👨🏻",
-  },
-  {
-    id: "op-2",
-    name: "Luigi",
-    avatar: "🧔🏽‍♂️",
-  },
+  { id: "op-yousef", name: "Yousef", avatar: "🧔🏽‍♂️" },
+  { id: "op-amza", name: "Amza", avatar: "👨🏽‍🦱" },
+  { id: "op-ando", name: "Ando", avatar: "👨🏻" },
+  { id: "op-simo", name: "Simo", avatar: "🧔🏻‍♂️" }
 ];
 
 export const getOperators = async (): Promise<Operator[]> => {
