@@ -284,8 +284,11 @@ const Admin = () => {
   const upcomingBookings = getUpcomingBookings();
   const totalRevenue = bookings.reduce((sum, b) => sum + b.service.price, 0);
 
-  // Calcola ricavo totale per operatore
-  const revenueByOperator = bookings.reduce((acc, booking) => {
+  // Calcola ricavo totale per operatore (mese corrente)
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentMonthBookings = bookings.filter(b => b.date.startsWith(currentMonth));
+
+  const revenueByOperator = currentMonthBookings.reduce((acc, booking) => {
     const operatorKey = booking.operatorName || "Nessun Operatore";
     acc[operatorKey] = (acc[operatorKey] || 0) + booking.service.price;
     return acc;
@@ -376,7 +379,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="font-display flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-green-500" />
-                  Ricavo per Operatore
+                  Ricavo Operatori (Mese Corrente)
                 </CardTitle>
               </CardHeader>
               <CardContent>
