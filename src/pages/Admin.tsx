@@ -284,6 +284,13 @@ const Admin = () => {
   const upcomingBookings = getUpcomingBookings();
   const totalRevenue = bookings.reduce((sum, b) => sum + b.service.price, 0);
 
+  // Calcola ricavo totale per operatore
+  const revenueByOperator = bookings.reduce((acc, booking) => {
+    const operatorKey = booking.operatorName || "Nessun Operatore";
+    acc[operatorKey] = (acc[operatorKey] || 0) + booking.service.price;
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
     <div className="min-h-screen bg-gradient-dark">
       {/* Header */}
@@ -364,6 +371,32 @@ const Admin = () => {
               </Card>
             </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="bg-gradient-card border-border">
+              <CardHeader>
+                <CardTitle className="font-display flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-green-500" />
+                  Ricavo per Operatore
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {Object.keys(revenueByOperator).length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">Nessun dato disponibile</p>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(revenueByOperator)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([operator, revenue]) => (
+                        <div key={operator} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+                          <p className="font-semibold text-foreground">{operator}</p>
+                          <p className="text-lg font-bold text-green-500">€{revenue}</p>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="bg-gradient-card border-border">
               <CardHeader>
                 <CardTitle className="font-display flex items-center gap-2">
@@ -395,6 +428,7 @@ const Admin = () => {
                 )}
               </CardContent>
             </Card>
+          </div>
           </TabsContent>
 
           {/* Bookings Tab */}
