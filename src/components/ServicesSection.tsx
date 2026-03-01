@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Clock, Euro } from "lucide-react";
-import { services, type Service } from "@/lib/services";
+import { getServices, type Service } from "@/lib/services";
+import { useEffect, useState } from "react";
 
 interface ServicesSectionProps {
   selectedService: Service | null;
@@ -8,6 +9,12 @@ interface ServicesSectionProps {
 }
 
 const ServicesSection = ({ selectedService, onSelectService }: ServicesSectionProps) => {
+  const [services, setServices] = useState<Service[]>([]);
+
+  useEffect(() => {
+    getServices().then(setServices);
+  }, []);
+
   return (
     <section className="py-24 bg-gradient-dark" id="servizi">
       <div className="container mx-auto px-4">

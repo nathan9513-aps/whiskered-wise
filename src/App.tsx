@@ -3,13 +3,26 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import { migrateDataToBackend } from "./lib/migration";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const [isMigrating, setIsMigrating] = useState(true);
+
+  useEffect(() => {
+    migrateDataToBackend().finally(() => setIsMigrating(false));
+  }, []);
+
+  if (isMigrating) {
+    return <div className="min-h-screen bg-gradient-dark flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;
+  }
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -24,6 +37,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

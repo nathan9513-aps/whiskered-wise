@@ -15,6 +15,7 @@ import { getOperators, type Operator } from "@/lib/operators";
 import { addBooking } from "@/lib/bookings";
 import { sendWhatsAppNotification, getWhatsAppConfig } from "@/lib/whatsapp";
 import { createCalendarEvent, isGoogleConnected } from "@/lib/googleCalendar";
+import { useEffect } from "react";
 
 interface BookingSectionProps {
   selectedService: Service | null;
@@ -28,7 +29,11 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
-  const operators = getOperators();
+  const [operators, setOperators] = useState<Operator[]>([]);
+
+  useEffect(() => {
+    getOperators().then(setOperators);
+  }, []);
 
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,8 +51,8 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
       // Format date for storage
       const formattedDate = format(date, "yyyy-MM-dd");
 
-      // Save booking to localStorage
-      const booking = addBooking({
+      // Save booking to backend
+      const booking = await addBooking({
         service: selectedService,
         operatorId: selectedOperator?.id,
         operatorName: selectedOperator ? selectedOperator.name : "Qualsiasi",
