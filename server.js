@@ -347,6 +347,7 @@ const certPath = `/app/data/ssl/fullchain.cer`;
 const keyPath = `/app/data/ssl/${domain}.key`;
 
 let httpsServer = null;
+let httpServer = null;
 
 const startHttps = () => {
   if (httpsServer) return true; // Already running
@@ -369,10 +370,31 @@ const startHttps = () => {
   return false;
 };
 
-app.listen(PORT, '0.0.0.0', () => {
+// Redirect middleware - redirects all HTTP requests to HTTPS
+const redirectToHttps = (req, res, next) => {
+  // Check if request is already HTTPS or if HTTPS is not available
+  if (httpsServer || req.headers['x-forwarded-proto'] === 'https') {
+    return next();
+  }
+  // Only redirect GET requests to avoid issues with POST data
+  if (req.method === 'GET') {
+    const httpsUrl = `https://${req.headers.host}${req.url}`;
+    return res.redirect(301, httpsUrl);
+  }
+  next();
+};
+
+httpServer = app.listen(PORT, '0.0.0.0', () => {
   console.log(`WhatsApp Backend Server (HTTP) running on port ${PORT}`);
+  console.log(`Note: HTTPS redirect is enabled when certificates are available`);
 
   const httpsStarted = startHttps();
+
+  // Apply HTTPS redirect middleware after checking HTTPS status
+  if (httpsStarted) {
+    app.use(redirectToHttps);
+    console.log('HTTPS redirect middleware enabled');
+  }
 
   // Create SSL services for the domain after the server has started
   console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
@@ -390,6 +412,9 @@ app.listen(PORT, '0.0.0.0', () => {
       const startedNow = startHttps();
       if (startedNow) {
         console.log("HTTPS Server successfully started after ACME script execution.");
+        // Enable redirect after HTTPS starts
+        app.use(redirectToHttps);
+        console.log('HTTPS redirect middleware enabled');
       }
     }
   });
