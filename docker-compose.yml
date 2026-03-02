@@ -4,11 +4,14 @@ services:
   app:
     build: .
     ports:
-      - "3001:3001"
+      - "80:80"
+      - "443:443"
     volumes:
       - app_data:/app/data
     environment:
       - NODE_ENV=production
+      - PORT=80
+      - HTTPS_PORT=443
     restart: unless-stopped
 
 volumes:

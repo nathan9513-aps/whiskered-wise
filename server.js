@@ -11,6 +11,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 import fs from 'fs/promises';
+import fssync from 'fs';
+import https from 'https';
 
 const app = express();
 app.use(cors());
@@ -340,11 +342,39 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+const domain = 'barbershopmarrakesh.com';
+const certPath = `/app/data/ssl/fullchain.cer`;
+const keyPath = `/app/data/ssl/${domain}.key`;
+
+let httpsServer = null;
+
+const startHttps = () => {
+  if (httpsServer) return true; // Already running
+  try {
+    if (fssync.existsSync(certPath) && fssync.existsSync(keyPath)) {
+      const options = {
+        key: fssync.readFileSync(keyPath),
+        cert: fssync.readFileSync(certPath)
+      };
+      const HTTPS_PORT = process.env.HTTPS_PORT || 443;
+      httpsServer = https.createServer(options, app);
+      httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+        console.log(`HTTPS Server running on port ${HTTPS_PORT}`);
+      });
+      return true;
+    }
+  } catch (err) {
+    console.error("Failed to start HTTPS server:", err);
+  }
+  return false;
+};
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`WhatsApp Backend Server running on port ${PORT}`);
+  console.log(`WhatsApp Backend Server (HTTP) running on port ${PORT}`);
+
+  const httpsStarted = startHttps();
 
   // Create SSL services for the domain after the server has started
-  const domain = 'barbershopmarrakesh.com';
   console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
   exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
     if (error) {
@@ -354,6 +384,13 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`get-ssl-acme.sh stdout: ${stdout}`);
     if (stderr) {
       console.error(`get-ssl-acme.sh stderr: ${stderr}`);
+    }
+
+    if (!httpsStarted) {
+      const startedNow = startHttps();
+      if (startedNow) {
+        console.log("HTTPS Server successfully started after ACME script execution.");
+      }
     }
   });
 });
