@@ -39,6 +39,7 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     lsb-release \
     wget \
+    curl \
     xdg-utils \
     chromium \
     --no-install-recommends \
