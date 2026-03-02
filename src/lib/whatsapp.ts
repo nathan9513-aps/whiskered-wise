@@ -82,6 +82,7 @@ export const sendWhatsAppNotification = async (booking: {
   time: string;
   name: string;
   phone: string;
+  operatorName?: string;
 }): Promise<boolean> => {
   const config = getWhatsAppConfig();
   if (!config.enabled) return false;
@@ -92,7 +93,8 @@ export const sendWhatsAppNotification = async (booking: {
     `💈 *Servizio:* ${booking.service.name}\n` +
     `💰 *Prezzo:* €${booking.service.price}\n` +
     `📆 *Data:* ${booking.date}\n` +
-    `⏰ *Ora:* ${booking.time}`;
+    `⏰ *Ora:* ${booking.time}` +
+    (booking.operatorName ? `\n💈 *Operatore:* ${booking.operatorName}` : "");
 
   try {
     const response = await fetch(`${API_URL}/send`, {

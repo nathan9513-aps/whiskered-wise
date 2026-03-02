@@ -103,6 +103,7 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
           time,
           name,
           phone,
+          operatorName: selectedOperator ? selectedOperator.name : "Qualsiasi",
         });
         toast.success("Notifica WhatsApp inviata!");
       }
