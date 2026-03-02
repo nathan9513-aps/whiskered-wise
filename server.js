@@ -383,7 +383,9 @@ let httpsServer = null;
 let httpServer = null;
 
 // Check if running behind Nginx proxy
-const BEHIND_PROXY = process.env.BEHIND_PROXY === 'true' || process.env.NODE_ENV === 'production';
+// We only enable this if explicitly requested via environment variable.
+// Otherwise, we manage HTTPS internally (useful for standalone Docker deployments).
+const BEHIND_PROXY = process.env.BEHIND_PROXY === 'true';
 
 const startHttps = () => {
   // Skip internal HTTPS if behind Nginx proxy
