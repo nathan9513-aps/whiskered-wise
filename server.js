@@ -18,6 +18,39 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Force HTTPS middleware - blocks all HTTP requests when HTTPS is available
+const forceHttps = (req, res, next) => {
+  // Skip API routes in development or if no HTTPS server is running
+  if (!httpsServer && process.env.NODE_ENV !== 'production') {
+    return next();
+  }
+  
+  // Check if request is already HTTPS
+  const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  
+  if (!isSecure && httpsServer) {
+    // Return 403 Forbidden for API requests on HTTP
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({ 
+        error: 'HTTPS required', 
+        message: 'This API requires HTTPS connection' 
+      });
+    }
+    // Redirect browser requests to HTTPS
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  
+  // Add HSTS header for HTTPS requests
+  if (isSecure) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  
+  next();
+};
+
+// Apply force HTTPS middleware before routes
+app.use(forceHttps);
+
 const PORT = process.env.PORT || 3001;
 
 // --- Persistence Setup ---
