@@ -443,8 +443,8 @@ const enforceHttps = (req, res, next) => {
   next();
 };
 
-// Bind address: localhost only when behind proxy, 0.0.0.0 otherwise
-const BIND_ADDRESS = BEHIND_PROXY ? '127.0.0.1' : '0.0.0.0';
+// Always bind to 0.0.0.0 so Nginx or Docker can route to it
+const BIND_ADDRESS = '0.0.0.0';
 
 httpServer = app.listen(PORT, BIND_ADDRESS, () => {
   console.log(`WhatsApp Backend Server running on http://${BIND_ADDRESS}:${PORT}`);
@@ -459,25 +459,23 @@ httpServer = app.listen(PORT, BIND_ADDRESS, () => {
 
   const httpsStarted = startHttps();
 
-  // Create SSL services for the domain after the server has started (only in standalone mode)
-  if (!BEHIND_PROXY) {
-    console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
-    exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error executing get-ssl-acme.sh: ${error}`);
-        return;
-      }
-      console.log(`get-ssl-acme.sh stdout: ${stdout}`);
-      if (stderr) {
-        console.error(`get-ssl-acme.sh stderr: ${stderr}`);
-      }
+  // Ensure ACME script is executed regardless of proxy mode to get/renew certificates for Nginx
+  console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
+  exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing get-ssl-acme.sh: ${error}`);
+      return;
+    }
+    console.log(`get-ssl-acme.sh stdout: ${stdout}`);
+    if (stderr) {
+      console.error(`get-ssl-acme.sh stderr: ${stderr}`);
+    }
 
-      if (!httpsStarted) {
-        const startedNow = startHttps();
-        if (startedNow) {
-          console.log("HTTPS Server successfully started after ACME script execution.");
-        }
+    if (!BEHIND_PROXY && !httpsStarted) {
+      const startedNow = startHttps();
+      if (startedNow) {
+        console.log("HTTPS Server successfully started after ACME script execution.");
       }
-    });
-  }
+    }
+  });
 });

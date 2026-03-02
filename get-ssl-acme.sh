@@ -33,9 +33,13 @@ SSL_DIR="/app/data/ssl"
 mkdir -p "$SSL_DIR"
 
 echo "Installing certificate to $SSL_DIR..."
+
+# Define the command to reload services (Nginx or internal Node.js)
+RELOAD_CMD="echo 'Certificates updated.'; if command -v nginx > /dev/null; then nginx -s reload || systemctl reload nginx || true; fi"
+
 $ACME_SH --install-cert -d "$DOMAIN" \
   --key-file       "$SSL_DIR/$DOMAIN.key"  \
   --fullchain-file "$SSL_DIR/fullchain.cer" \
-  --reloadcmd      "echo 'Certificates updated.'"
+  --reloadcmd      "$RELOAD_CMD"
 
 echo "Certificate issuance process completed."
