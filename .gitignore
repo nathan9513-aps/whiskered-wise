@@ -26,5 +26,8 @@ dist-ssr
 .wwebjs_auth/
 .wwebjs_cache/
 
+# Development SSL certificates
+/ssl/
+
 .wwebjs_auth/
 .wwebjs_cache/

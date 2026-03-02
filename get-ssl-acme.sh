@@ -1,11 +1,10 @@
 #!/bin/bash
 
-DOMAIN=$1
+# Use the DOMAIN environment variable, falling back to argument 1, or default
+DOMAIN=${DOMAIN:-$1}
 
 if [ -z "$DOMAIN" ]; then
-  echo "Error: Domain name is required."
-  echo "Usage: $0 <domain>"
-  exit 1
+  DOMAIN="barbershopmarrakesh.com"
 fi
 
 echo "Starting SSL certificate request process for $DOMAIN"

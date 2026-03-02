@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"node server.js\"",
+    "dev": "node server.js",
+    "ssl:dev": "./generate-dev-ssl.sh",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
