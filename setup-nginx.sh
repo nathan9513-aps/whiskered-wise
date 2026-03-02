@@ -26,6 +26,18 @@ cp nginx.conf /etc/nginx/sites-available/whiskered-wise
 ln -sf /etc/nginx/sites-available/whiskered-wise /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 
+# Ensure SSL directory exists
+mkdir -p /app/data/ssl
+
+# Check if SSL certificates exist, if not, create self-signed temporary ones
+if [ ! -f /app/data/ssl/fullchain.cer ] || [ ! -f /app/data/ssl/barbershopmarrakesh.com.key ]; then
+    echo "SSL certificates not found. Generating temporary self-signed certificates so Nginx can start..."
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /app/data/ssl/barbershopmarrakesh.com.key \
+        -out /app/data/ssl/fullchain.cer \
+        -subj "/C=IT/ST=State/L=City/O=Organization/CN=barbershopmarrakesh.com"
+fi
+
 # Test configuration
 echo "Testing Nginx configuration..."
 nginx -t
