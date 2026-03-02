@@ -10,10 +10,24 @@ fi
 
 echo "Starting SSL certificate request process for $DOMAIN"
 
+# Check for curl and try to install it if missing
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl could not be found. Attempting to install..."
+  if command -v apt-get >/dev/null 2>&1; then
+      apt-get update && apt-get install -y curl
+  else
+      echo "Error: curl is required but not installed. Please install curl and try again."
+      exit 1
+  fi
+fi
+
 # Check if acme.sh is installed, install if not
 if [ ! -f "$HOME/.acme.sh/acme.sh" ]; then
   echo "Installing acme.sh..."
-  curl https://get.acme.sh | sh -s email=admin@$DOMAIN
+  if ! curl https://get.acme.sh | sh -s email=admin@$DOMAIN; then
+    echo "Error: Failed to install acme.sh"
+    exit 1
+  fi
 fi
 
 # Make sure acme.sh is in PATH or use absolute path
