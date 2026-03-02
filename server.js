@@ -333,18 +333,74 @@ app.post('/api/migrate', async (req, res) => {
 });
 
 
-// Serve static files from the React frontend app
-// allow dotfiles for Let's Encrypt /.well-known/acme-challenge/
-app.use(express.static(path.join(__dirname, 'dist'), { dotfiles: 'allow' }));
+const isProd = process.env.NODE_ENV === 'production';
+
+const domain = process.env.DOMAIN || 'barbershopmarrakesh.com';
+const certPath = process.env.NODE_ENV === 'production'
+  ? `/app/data/ssl/fullchain.cer`
+  : path.join(__dirname, 'ssl', 'cert.pem');
+const keyPath = process.env.NODE_ENV === 'production'
+  ? `/app/data/ssl/${domain}.key`
+  : path.join(__dirname, 'ssl', 'key.pem');
+
+let vite;
+if (!isProd) {
+  // Dynamically import vite so it doesn't break production builds
+  // where devDependencies are not installed
+  const { createServer: createViteServer } = await import('vite');
+
+  // Load dev certificates for Vite HMR WebSocket server
+  const devCertOptions = {
+    key: fssync.existsSync(keyPath) ? fssync.readFileSync(keyPath) : null,
+    cert: fssync.existsSync(certPath) ? fssync.readFileSync(certPath) : null
+  };
+
+  // Create Vite server in middleware mode and configure the app type as
+  // 'custom', disabling Vite's own HTML serving logic so parent server
+  // can take control
+  vite = await createViteServer({
+    server: {
+      middlewareMode: true,
+      https: devCertOptions.key && devCertOptions.cert ? devCertOptions : false
+    },
+    appType: 'custom'
+  });
+  // Use vite's connect instance as middleware
+  app.use(vite.middlewares);
+} else {
+  // Serve static files from the React frontend app
+  // allow dotfiles for Let's Encrypt /.well-known/acme-challenge/
+  app.use(express.static(path.join(__dirname, 'dist'), { dotfiles: 'allow' }));
+}
 
 // Anything that doesn't match the above, send back index.html
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+app.use(async (req, res, next) => {
+  const url = req.originalUrl;
 
-const domain = 'barbershopmarrakesh.com';
-const certPath = `/app/data/ssl/fullchain.cer`;
-const keyPath = `/app/data/ssl/${domain}.key`;
+  // Exclude API requests from HTML fallback
+  if (url.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
+
+  try {
+    if (!isProd) {
+      // always read fresh template in dev
+      let template = await fs.readFile(path.join(__dirname, 'index.html'), 'utf-8');
+      template = await vite.transformIndexHtml(url, template);
+      return res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+    } else {
+      return res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    }
+  } catch (e) {
+    if (!isProd) vite.ssrFixStacktrace(e);
+    console.log(e.stack);
+    if (!isProd) {
+      return res.status(500).end(e.stack);
+    } else {
+      return res.status(500).send('Internal Server Error');
+    }
+  }
+});
 
 let httpsServer = null;
 
@@ -374,23 +430,28 @@ app.listen(PORT, '0.0.0.0', () => {
 
   const httpsStarted = startHttps();
 
-  // Create SSL services for the domain after the server has started
-  console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
-  exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing get-ssl-acme.sh: ${error}`);
-      return;
-    }
-    console.log(`get-ssl-acme.sh stdout: ${stdout}`);
-    if (stderr) {
-      console.error(`get-ssl-acme.sh stderr: ${stderr}`);
-    }
-
-    if (!httpsStarted) {
-      const startedNow = startHttps();
-      if (startedNow) {
-        console.log("HTTPS Server successfully started after ACME script execution.");
+  // Create SSL services for the domain after the server has started in production
+  if (process.env.NODE_ENV === 'production') {
+    console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
+    exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error executing get-ssl-acme.sh: ${error}`);
+        return;
       }
-    }
-  });
+      console.log(`get-ssl-acme.sh stdout: ${stdout}`);
+      if (stderr) {
+        console.error(`get-ssl-acme.sh stderr: ${stderr}`);
+      }
+
+      if (!httpsStarted) {
+        const startedNow = startHttps();
+        if (startedNow) {
+          console.log("HTTPS Server successfully started after ACME script execution.");
+        }
+      }
+    });
+  } else if (!httpsStarted) {
+    console.log("HTTPS Server could not be started. Missing development certificates in /ssl/ directory.");
+    console.log("Run 'npm run ssl:dev' to generate self-signed certificates.");
+  }
 });
