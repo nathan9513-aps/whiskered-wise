@@ -3,6 +3,7 @@ import { MapPin, Phone, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { shopInfo } from "@/lib/services";
 import heroImage from "@/assets/hero-barbershop.jpg";
+import logoImage from "@/assets/logo.jpg";
 
 interface HeroSectionProps {
   onBookClick: () => void;
@@ -28,6 +29,13 @@ const HeroSection = ({ onBookClick }: HeroSectionProps) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
+          <div className="flex justify-center mb-6">
+            <img
+              src={logoImage}
+              alt="Barbiere Shop Marrakech Logo"
+              className="w-32 h-32 md:w-48 md:h-48 rounded-full border-4 border-primary/30 shadow-gold object-cover"
+            />
+          </div>
           <p className="text-primary font-body tracking-[0.3em] uppercase text-sm mb-4">
             Ferrara · Dal cuore del Marocco
           </p>
