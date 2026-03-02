@@ -73,6 +73,8 @@ VOLUME ["/app/data"]
 
 # Esponi la porta (Fly.io userà questa porta, oppure puoi specificarla in fly.toml)
 EXPOSE 3001
+EXPOSE 80
+EXPOSE 443
 
 # Avvia il server
 CMD ["node", "server.js"]
