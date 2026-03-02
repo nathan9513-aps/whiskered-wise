@@ -382,7 +382,16 @@ const keyPath = `/app/data/ssl/${domain}.key`;
 let httpsServer = null;
 let httpServer = null;
 
+// Check if running behind Nginx proxy
+const BEHIND_PROXY = process.env.BEHIND_PROXY === 'true' || process.env.NODE_ENV === 'production';
+
 const startHttps = () => {
+  // Skip internal HTTPS if behind Nginx proxy
+  if (BEHIND_PROXY) {
+    console.log('Running behind Nginx proxy - skipping internal HTTPS server');
+    return false;
+  }
+
   if (httpsServer) return true; // Already running
   try {
     if (fssync.existsSync(certPath) && fssync.existsSync(keyPath)) {
@@ -403,52 +412,72 @@ const startHttps = () => {
   return false;
 };
 
-// Redirect middleware - redirects all HTTP requests to HTTPS
-const redirectToHttps = (req, res, next) => {
-  // Check if request is already HTTPS or if HTTPS is not available
-  if (httpsServer || req.headers['x-forwarded-proto'] === 'https') {
-    return next();
+// Trust proxy headers when behind Nginx
+if (BEHIND_PROXY) {
+  app.set('trust proxy', true);
+  console.log('Trust proxy enabled - trusting X-Forwarded-* headers from Nginx');
+}
+
+// Block HTTP API requests when behind proxy (Nginx handles HTTPS)
+const enforceHttps = (req, res, next) => {
+  // Skip if not behind proxy
+  if (!BEHIND_PROXY) return next();
+
+  // Check if request came through HTTPS (via Nginx)
+  const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+
+  if (!isSecure) {
+    // Block API calls on HTTP
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({
+        error: 'HTTPS required',
+        message: 'This API requires HTTPS connection'
+      });
+    }
+    // Redirect browser requests to HTTPS
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
   }
-  // Only redirect GET requests to avoid issues with POST data
-  if (req.method === 'GET') {
-    const httpsUrl = `https://${req.headers.host}${req.url}`;
-    return res.redirect(301, httpsUrl);
-  }
+
+  // Add HSTS header
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   next();
 };
 
-httpServer = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`WhatsApp Backend Server (HTTP) running on port ${PORT}`);
-  console.log(`Note: HTTPS redirect is enabled when certificates are available`);
+// Bind address: localhost only when behind proxy, 0.0.0.0 otherwise
+const BIND_ADDRESS = BEHIND_PROXY ? '127.0.0.1' : '0.0.0.0';
+
+httpServer = app.listen(PORT, BIND_ADDRESS, () => {
+  console.log(`WhatsApp Backend Server running on http://${BIND_ADDRESS}:${PORT}`);
+
+  if (BEHIND_PROXY) {
+    console.log('Mode: Behind Nginx proxy - HTTPS termination handled by Nginx');
+    // Apply HTTPS enforcement middleware
+    app.use(enforceHttps);
+  } else {
+    console.log('Mode: Standalone - managing HTTPS internally');
+  }
 
   const httpsStarted = startHttps();
 
-  // Apply HTTPS redirect middleware after checking HTTPS status
-  if (httpsStarted) {
-    app.use(redirectToHttps);
-    console.log('HTTPS redirect middleware enabled');
-  }
-
-  // Create SSL services for the domain after the server has started
-  console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
-  exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing get-ssl-acme.sh: ${error}`);
-      return;
-    }
-    console.log(`get-ssl-acme.sh stdout: ${stdout}`);
-    if (stderr) {
-      console.error(`get-ssl-acme.sh stderr: ${stderr}`);
-    }
-
-    if (!httpsStarted) {
-      const startedNow = startHttps();
-      if (startedNow) {
-        console.log("HTTPS Server successfully started after ACME script execution.");
-        // Enable redirect after HTTPS starts
-        app.use(redirectToHttps);
-        console.log('HTTPS redirect middleware enabled');
+  // Create SSL services for the domain after the server has started (only in standalone mode)
+  if (!BEHIND_PROXY) {
+    console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
+    exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error executing get-ssl-acme.sh: ${error}`);
+        return;
       }
-    }
-  });
+      console.log(`get-ssl-acme.sh stdout: ${stdout}`);
+      if (stderr) {
+        console.error(`get-ssl-acme.sh stderr: ${stderr}`);
+      }
+
+      if (!httpsStarted) {
+        const startedNow = startHttps();
+        if (startedNow) {
+          console.log("HTTPS Server successfully started after ACME script execution.");
+        }
+      }
+    });
+  }
 });
