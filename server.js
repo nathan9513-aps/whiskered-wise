@@ -19,6 +19,20 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
+const HTTPS_PORT = process.env.HTTPS_PORT || 443;
+
+// --- Middleware to redirect HTTP to HTTPS in development ---
+app.use((req, res, next) => {
+  if (!req.secure && req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV !== 'production') {
+    // Determine the host (handling custom localhost port)
+    let host = req.hostname;
+    if (Number(HTTPS_PORT) !== 443) {
+      host = `${host}:${HTTPS_PORT}`;
+    }
+    return res.redirect(`https://${host}${req.url}`);
+  }
+  next();
+});
 
 // --- Persistence Setup ---
 const DATA_DIR = process.env.DATA_DIR || __dirname;
