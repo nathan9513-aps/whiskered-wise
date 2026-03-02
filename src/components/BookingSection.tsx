@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { type Service, timeSlots } from "@/lib/services";
 import { getOperators, type Operator } from "@/lib/operators";
-import { addBooking } from "@/lib/bookings";
+import { addBooking, getBookingsByDate, type Booking } from "@/lib/bookings";
 import { sendWhatsAppNotification, getWhatsAppConfig } from "@/lib/whatsapp";
 import { createCalendarEvent, isGoogleConnected } from "@/lib/googleCalendar";
 import { useEffect } from "react";
@@ -30,13 +30,43 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
   const [notes, setNotes] = useState("");
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
   const [operators, setOperators] = useState<Operator[]>([]);
+  const [dateBookings, setDateBookings] = useState<Booking[]>([]);
 
   useEffect(() => {
     getOperators().then(setOperators);
   }, []);
 
+  // Fetch bookings when date changes
+  useEffect(() => {
+    if (date) {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      getBookingsByDate(formattedDate).then(setDateBookings);
+    } else {
+      setDateBookings([]);
+    }
+  }, [date]);
+
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isSlotAvailable = (slot: string) => {
+    if (!date) return true;
+
+    // Se un operatore è selezionato, lo slot è non disponibile se quell'operatore ha già una prenotazione per quello slot
+    if (selectedOperator) {
+      const isOperatorBooked = dateBookings.some(
+        b => b.time === slot && b.operatorId === selectedOperator.id
+      );
+      if (isOperatorBooked) return false;
+    } else {
+      // Se nessun operatore è selezionato ("Qualsiasi"), lo slot non è disponibile solo se tutti gli operatori sono occupati
+      const bookingsForSlot = dateBookings.filter(b => b.time === slot);
+      const maxCapacity = operators.length > 0 ? operators.length : 1; // Fallback se non ci sono operatori
+      if (bookingsForSlot.length >= maxCapacity) return false;
+    }
+
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,21 +290,27 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
             <div>
               <label className="text-sm text-muted-foreground mb-2 block font-body">Ora *</label>
               <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1">
-                {timeSlots.map((slot) => (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => setTime(slot)}
-                    className={cn(
-                      "px-3 py-2 rounded-md text-sm font-body transition-all",
-                      time === slot
-                        ? "bg-primary text-primary-foreground shadow-gold"
-                        : "bg-card border border-border text-foreground hover:border-primary/40"
-                    )}
-                  >
-                    {slot}
-                  </button>
-                ))}
+                {timeSlots.map((slot) => {
+                  const available = isSlotAvailable(slot);
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      disabled={!available}
+                      onClick={() => setTime(slot)}
+                      className={cn(
+                        "px-3 py-2 rounded-md text-sm font-body transition-all",
+                        time === slot
+                          ? "bg-primary text-primary-foreground shadow-gold"
+                          : available
+                            ? "bg-card border border-border text-foreground hover:border-primary/40"
+                            : "bg-secondary text-muted-foreground border-border/50 opacity-50 cursor-not-allowed line-through"
+                      )}
+                    >
+                      {slot}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

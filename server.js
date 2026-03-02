@@ -18,11 +18,13 @@ app.use(express.json());
 const PORT = process.env.PORT || 3001;
 
 // --- Persistence Setup ---
-const DATA_FILE = path.join(__dirname, 'data.json');
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const DATA_FILE = path.join(DATA_DIR, 'data.json');
 
 // Initialize data file if it doesn't exist
 const initDataFile = async () => {
   try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.access(DATA_FILE);
   } catch (error) {
     const defaultData = {
@@ -253,11 +255,36 @@ app.delete('/api/operators/:id', async (req, res) => {
 // Bookings
 app.get('/api/bookings', async (req, res) => {
   const data = await readData();
-  res.json(data.bookings);
+  let bookings = data.bookings;
+  if (req.query.date) {
+    bookings = bookings.filter(b => b.date === req.query.date);
+  }
+  res.json(bookings);
 });
 
 app.post('/api/bookings', async (req, res) => {
   const data = await readData();
+  const { date, time, operatorId } = req.body;
+
+  // Check for overlapping appointments
+  if (date && time) {
+    const bookingsForSlot = data.bookings.filter(b => b.date === date && b.time === time);
+    const maxCapacity = data.operators.length;
+
+    // Check global capacity first
+    if (bookingsForSlot.length >= maxCapacity) {
+      return res.status(400).json({ success: false, error: 'Tutti gli operatori sono occupati in questo orario.' });
+    }
+
+    // If a specific operator is selected, check if they are already explicitly booked
+    if (operatorId && operatorId !== 'any') {
+      const isBooked = bookingsForSlot.some(b => b.operatorId === operatorId);
+      if (isBooked) {
+        return res.status(400).json({ success: false, error: 'Questo operatore è già prenotato in questo orario.' });
+      }
+    }
+  }
+
   const newBooking = { ...req.body, id: Date.now().toString(), createdAt: new Date().toISOString() };
   data.bookings.push(newBooking);
   await writeData(data);
