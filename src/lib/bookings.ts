@@ -28,6 +28,17 @@ export const getBookings = async (): Promise<Booking[]> => {
   }
 };
 
+export const getBookingsByDate = async (date: string): Promise<Booking[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/bookings?date=${date}`);
+    if (!response.ok) throw new Error("Network error");
+    return await response.json();
+  } catch (error) {
+    console.error("Failed to fetch bookings for date:", error);
+    return [];
+  }
+};
+
 export const addBooking = async (booking: Omit<Booking, "id" | "createdAt">): Promise<Booking> => {
   const response = await fetch(`${API_BASE_URL}/bookings`, {
     method: "POST",

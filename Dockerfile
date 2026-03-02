@@ -62,6 +62,13 @@ RUN npm run build
 # Variabili d'ambiente per far trovare Chromium a Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV DATA_DIR=/app/data
+
+# Crea la cartella per i dati
+RUN mkdir -p /app/data
+
+# Volume per persistere i dati
+VOLUME ["/app/data"]
 
 # Esponi la porta (Fly.io userà questa porta, oppure puoi specificarla in fly.toml)
 EXPOSE 3001
