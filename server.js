@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode';
+import { exec } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -331,7 +332,8 @@ app.post('/api/migrate', async (req, res) => {
 
 
 // Serve static files from the React frontend app
-app.use(express.static(path.join(__dirname, 'dist')));
+// allow dotfiles for Let's Encrypt /.well-known/acme-challenge/
+app.use(express.static(path.join(__dirname, 'dist'), { dotfiles: 'allow' }));
 
 // Anything that doesn't match the above, send back index.html
 app.use((req, res) => {
@@ -340,4 +342,18 @@ app.use((req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`WhatsApp Backend Server running on port ${PORT}`);
+
+  // Create SSL services for the domain after the server has started
+  const domain = 'barbershopmarrakesh.com';
+  console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
+  exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing get-ssl-acme.sh: ${error}`);
+      return;
+    }
+    console.log(`get-ssl-acme.sh stdout: ${stdout}`);
+    if (stderr) {
+      console.error(`get-ssl-acme.sh stderr: ${stderr}`);
+    }
+  });
 });
