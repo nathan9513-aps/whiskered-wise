@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     xdg-utils \
     chromium \
+    cron \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
@@ -73,6 +74,8 @@ VOLUME ["/app/data"]
 
 # Esponi la porta (Fly.io userà questa porta, oppure puoi specificarla in fly.toml)
 EXPOSE 3001
+EXPOSE 80
+EXPOSE 443
 
-# Avvia il server
-CMD ["node", "server.js"]
+# Avvia cron in background e il server in foreground
+CMD ["sh", "-c", "service cron start && exec node server.js"]
