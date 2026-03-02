@@ -100,6 +100,12 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
       return;
     }
 
+    // Re-validate the slot availability before submitting
+    if (!isSlotAvailable(time)) {
+      toast.error("Lo slot selezionato non è più disponibile. Scegli un altro orario.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
