@@ -52,6 +52,31 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
   const isSlotAvailable = (slot: string) => {
     if (!date) return true;
 
+    // Block slots that are not at least 2 hours from now on the same day
+    const now = new Date();
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+
+    if (isToday) {
+      const [hours, minutes] = slot.split(":").map(Number);
+      const slotTime = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        hours,
+        minutes,
+        0,
+        0
+      );
+      const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+      if (slotTime < twoHoursFromNow) {
+        return false;
+      }
+    }
+
     // Se un operatore è selezionato, lo slot è non disponibile se quell'operatore ha già una prenotazione per quello slot
     if (selectedOperator) {
       const isOperatorBooked = dateBookings.some(
@@ -72,6 +97,12 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
     e.preventDefault();
     if (!selectedService || !date || !time || !name || !phone) {
       toast.error("Compila tutti i campi obbligatori");
+      return;
+    }
+
+    // Re-validate the slot availability before submitting
+    if (!isSlotAvailable(time)) {
+      toast.error("Lo slot selezionato non è più disponibile. Scegli un altro orario.");
       return;
     }
 
@@ -280,7 +311,11 @@ const BookingSection = ({ selectedService }: BookingSectionProps) => {
                     mode="single"
                     selected={date}
                     onSelect={setDate}
-                    disabled={(d) => d < new Date() || d.getDay() === 0}
+                    disabled={(d) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return d < today || d.getDay() === 0;
+                    }}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
