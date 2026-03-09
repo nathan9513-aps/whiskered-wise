@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename);
 import fs from 'fs/promises';
 import fssync from 'fs';
 import https from 'https';
+import { Redis } from '@upstash/redis';
 
 const app = express();
 app.use(cors());
@@ -35,60 +36,83 @@ app.use((req, res, next) => {
 });
 
 // --- Persistence Setup ---
+// Uses Vercel KV (Upstash Redis) if available, otherwise fallback to local JSON file
+const redis = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
+  ? new Redis({
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN,
+    })
+  : null;
+
 const DATA_DIR = process.env.VERCEL ? '/tmp' : (process.env.DATA_DIR || __dirname);
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 
-// Initialize data file if it doesn't exist
+const defaultData = {
+  services: [
+    { id: "taglio-uomo", name: "Taglio Uomo", description: "Taglio capelli uomo", duration: 30, price: 19, icon: "✂️" },
+    { id: "shampoo", name: "Shampoo", description: "Lavaggio capelli", duration: 30, price: 2, icon: "🧴" },
+    { id: "barba", name: "Barba", description: "Taglio Barba", duration: 30, price: 5, icon: "🪒" },
+    { id: "barba-modellata", name: "Barba Modellata", description: "Taglio barba modellata", duration: 30, price: 8, icon: "💇‍♂️" },
+    { id: "sopracciglia", name: "Sopracciglia", description: "Taglio sopracciglia", duration: 30, price: 3, icon: "✂️" },
+    { id: "pulizia-viso", name: "Pulizia Viso", description: "Pulizia del viso", duration: 30, price: 17, icon: "🧴" },
+    { id: "disegni", name: "Disegni", description: "Disegni", duration: 30, price: 5, icon: "🎨" },
+    { id: "depilazione-naso-orecchie", name: "Depilazione naso e orecchie", description: "Depilazione del naso e delle orecchie", duration: 30, price: 3, icon: "🪒" },
+    { id: "meches", name: "Meches", description: "Meches capelli", duration: 30, price: 25, icon: "🎨" },
+    { id: "colore", name: "Colore", description: "Colore", duration: 30, price: 0, icon: "🎨" },
+    { id: "vip-all-inclusive", name: "Servizio speciale vip All inclusive", description: "Servizio All inclusive", duration: 30, price: 4, icon: "🌟" },
+    { id: "taglio-10-bambini", name: "Taglio 10 bambini under", description: "Taglio bambini", duration: 30, price: 10, icon: "✂️" },
+    { id: "solo-shampoo", name: "Solo shampoo", description: "Solo lavaggio capelli", duration: 30, price: 5, icon: "🧴" }
+  ],
+  operators: [
+    { id: "op-yousef", name: "Yousef", avatar: "🧔🏽‍♂️" },
+    { id: "op-amza", name: "Amza", avatar: "👨🏽‍🦱" },
+    { id: "op-ando", name: "Ando", avatar: "👨🏻" },
+    { id: "op-simo", name: "Simo", avatar: "🧔🏻‍♂️" }
+  ],
+  bookings: []
+};
+
+// Initialize data file if it doesn't exist (Local Fallback)
 const initDataFile = async () => {
+  if (redis) return; // Not needed if using Redis
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.access(DATA_FILE);
   } catch (error) {
-    const defaultData = {
-      services: [
-        { id: "taglio-uomo", name: "Taglio Uomo", description: "Taglio capelli uomo", duration: 30, price: 19, icon: "✂️" },
-        { id: "shampoo", name: "Shampoo", description: "Lavaggio capelli", duration: 30, price: 2, icon: "🧴" },
-        { id: "barba", name: "Barba", description: "Taglio Barba", duration: 30, price: 5, icon: "🪒" },
-        { id: "barba-modellata", name: "Barba Modellata", description: "Taglio barba modellata", duration: 30, price: 8, icon: "💇‍♂️" },
-        { id: "sopracciglia", name: "Sopracciglia", description: "Taglio sopracciglia", duration: 30, price: 3, icon: "✂️" },
-        { id: "pulizia-viso", name: "Pulizia Viso", description: "Pulizia del viso", duration: 30, price: 17, icon: "🧴" },
-        { id: "disegni", name: "Disegni", description: "Disegni", duration: 30, price: 5, icon: "🎨" },
-        { id: "depilazione-naso-orecchie", name: "Depilazione naso e orecchie", description: "Depilazione del naso e delle orecchie", duration: 30, price: 3, icon: "🪒" },
-        { id: "meches", name: "Meches", description: "Meches capelli", duration: 30, price: 25, icon: "🎨" },
-        { id: "colore", name: "Colore", description: "Colore", duration: 30, price: 0, icon: "🎨" },
-        { id: "vip-all-inclusive", name: "Servizio speciale vip All inclusive", description: "Servizio All inclusive", duration: 30, price: 4, icon: "🌟" },
-        { id: "taglio-10-bambini", name: "Taglio 10 bambini under", description: "Taglio bambini", duration: 30, price: 10, icon: "✂️" },
-        { id: "solo-shampoo", name: "Solo shampoo", description: "Solo lavaggio capelli", duration: 30, price: 5, icon: "🧴" }
-      ],
-      operators: [
-        { id: "op-yousef", name: "Yousef", avatar: "🧔🏽‍♂️" },
-        { id: "op-amza", name: "Amza", avatar: "👨🏽‍🦱" },
-        { id: "op-ando", name: "Ando", avatar: "👨🏻" },
-        { id: "op-simo", name: "Simo", avatar: "🧔🏻‍♂️" }
-      ],
-      bookings: []
-    };
     await fs.writeFile(DATA_FILE, JSON.stringify(defaultData, null, 2));
   }
 };
 initDataFile();
 
 const readData = async () => {
-  try {
-    const data = await fs.readFile(DATA_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      await initDataFile();
+  if (redis) {
+    const data = await redis.get('app_data');
+    if (!data) {
+      await redis.set('app_data', defaultData);
+      return defaultData;
+    }
+    return data;
+  } else {
+    try {
       const data = await fs.readFile(DATA_FILE, 'utf-8');
       return JSON.parse(data);
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        await initDataFile();
+        const data = await fs.readFile(DATA_FILE, 'utf-8');
+        return JSON.parse(data);
+      }
+      throw err;
     }
-    throw err;
   }
 };
 
 const writeData = async (data) => {
-  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2));
+  if (redis) {
+    await redis.set('app_data', data);
+  } else {
+    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2));
+  }
 };
 
 let client = null;
