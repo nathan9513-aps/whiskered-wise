@@ -37,10 +37,13 @@ app.use((req, res, next) => {
 
 // --- Persistence Setup ---
 // Uses Vercel KV (Upstash Redis) if available, otherwise fallback to local JSON file
-const redis = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
+const kvRestApiUrl = process.env.appdata_KV_REST_API_URL || process.env.KV_REST_API_URL;
+const kvRestApiToken = process.env.appdata_KV_REST_API_TOKEN || process.env.KV_REST_API_TOKEN;
+
+const redis = kvRestApiUrl && kvRestApiToken
   ? new Redis({
-      url: process.env.KV_REST_API_URL,
-      token: process.env.KV_REST_API_TOKEN,
+      url: kvRestApiUrl,
+      token: kvRestApiToken,
     })
   : null;
 
