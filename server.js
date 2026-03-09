@@ -35,7 +35,7 @@ app.use((req, res, next) => {
 });
 
 // --- Persistence Setup ---
-const DATA_DIR = process.env.DATA_DIR || __dirname;
+const DATA_DIR = process.env.VERCEL ? '/tmp' : (process.env.DATA_DIR || __dirname);
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
 
 // Initialize data file if it doesn't exist
@@ -108,8 +108,9 @@ app.post('/api/whatsapp/connect', async (req, res) => {
   }
 
   if (!client) {
+    const authOptions = process.env.VERCEL ? { dataPath: '/tmp/.wwebjs_auth' } : {};
     client = new Client({
-      authStrategy: new LocalAuth(),
+      authStrategy: new LocalAuth(authOptions),
       puppeteer: {
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
@@ -361,7 +362,8 @@ let vite;
 if (!isProd) {
   // Dynamically import vite so it doesn't break production builds
   // where devDependencies are not installed
-  const { createServer: createViteServer } = await import('vite');
+  const viteModule = 'vite';
+  const { createServer: createViteServer } = await import(viteModule);
 
   // Load dev certificates for Vite HMR WebSocket server
   const devCertOptions = {
@@ -439,33 +441,37 @@ const startHttps = () => {
   return false;
 };
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`WhatsApp Backend Server (HTTP) running on port ${PORT}`);
+if (!process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`WhatsApp Backend Server (HTTP) running on port ${PORT}`);
 
-  const httpsStarted = startHttps();
+    const httpsStarted = startHttps();
 
-  // Create SSL services for the domain after the server has started in production
-  if (process.env.NODE_ENV === 'production') {
-    console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
-    exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error executing get-ssl-acme.sh: ${error}`);
-        return;
-      }
-      console.log(`get-ssl-acme.sh stdout: ${stdout}`);
-      if (stderr) {
-        console.error(`get-ssl-acme.sh stderr: ${stderr}`);
-      }
-
-      if (!httpsStarted) {
-        const startedNow = startHttps();
-        if (startedNow) {
-          console.log("HTTPS Server successfully started after ACME script execution.");
+    // Create SSL services for the domain after the server has started in production
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`Executing ./get-ssl-acme.sh ${domain} ...`);
+      exec(`./get-ssl-acme.sh ${domain}`, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error executing get-ssl-acme.sh: ${error}`);
+          return;
         }
-      }
-    });
-  } else if (!httpsStarted) {
-    console.log("HTTPS Server could not be started. Missing development certificates in /ssl/ directory.");
-    console.log("Run 'npm run ssl:dev' to generate self-signed certificates.");
-  }
-});
+        console.log(`get-ssl-acme.sh stdout: ${stdout}`);
+        if (stderr) {
+          console.error(`get-ssl-acme.sh stderr: ${stderr}`);
+        }
+
+        if (!httpsStarted) {
+          const startedNow = startHttps();
+          if (startedNow) {
+            console.log("HTTPS Server successfully started after ACME script execution.");
+          }
+        }
+      });
+    } else if (!httpsStarted) {
+      console.log("HTTPS Server could not be started. Missing development certificates in /ssl/ directory.");
+      console.log("Run 'npm run ssl:dev' to generate self-signed certificates.");
+    }
+  });
+}
+
+export default app;
